@@ -1,0 +1,14 @@
+config/eternal.json
+config/reddit.json
+praw.ini
+venv/
+chromabot.egg-info/
+notes/
+.idea
+.project
+.pydevproject
+.settings
+*.bak
+*.db
+*.pyc
+*.log
