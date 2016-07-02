@@ -12,14 +12,17 @@ class Config(object):
         self.data = {}
 
         proposals = [conffile, os.environ.get("CHROMABOT_CONFIG"),
-                    "../config/config.ini", "./config/config.ini",
-                    "/etc/chromabot/config.ini"]
+                     "../config/config.ini", "./config/config.ini",
+                     "/etc/chromabot/config.ini"]
 
         if not self.check_exist(proposals):
             logging.critical("Could not locate config file!")
             raise FileNotFoundError("Unable to locate config file")
 
         self.refresh()
+
+    def __contains__(self, item):
+        return item in self.data
 
     def __getitem__(self, key):
         return self.data[key]
@@ -41,3 +44,4 @@ class Config(object):
         with open(self.conffile) as data_file:
             self.data = ConfigParser()
             self.data.read(self.conffile, encoding='utf8')
+        logging.info("Loaded config file from %s", self.conffile)

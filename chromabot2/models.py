@@ -36,5 +36,5 @@ class User(Base):
         return result
 
     def __repr__(self):
-        return "<User(name='%s', team='%d', loyalists='%d')>" % (
-            self.name, self.team, self.loyalists)
+        return "<User(name='%s', team='%d')>" % (
+            self.name, self.team)

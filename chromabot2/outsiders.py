@@ -6,6 +6,15 @@ from .db import DB
 from chromabot2.battle import Battle
 from chromabot2.models import User
 
+all_outsiders = {}
+
+
+def outsider(name):
+    def wrap(cls):
+        all_outsiders[name] = cls
+        return cls
+    return wrap
+
 
 class Message:
 
@@ -31,6 +40,9 @@ class NullOutsider:
     def get_messages(self):
         return []
 
+    def get_recruits(self):
+        return []
+
     def infer_battle(self, message):
         # Sometimes, context can tell you what battle this is referring to.
         # But you can't get context except via an Outsider
@@ -43,6 +55,9 @@ class NullOutsider:
     def report_results(self, results):
         pass
 
+    def startup(self):
+        return []
+
     def visual_state(self, battle):
         return ''
 
@@ -53,6 +68,7 @@ class NullOutsider:
             return '. '
 
 
+@outsider("debug")
 class DebugOutsider(NullOutsider):
 
     def __init__(self, config):

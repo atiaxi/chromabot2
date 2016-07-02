@@ -1,8 +1,9 @@
-config/eternal.json
-config/reddit.json
+config/eternal.ini
+config/reddit.ini
+config/local.ini
 praw.ini
 venv/
-chromabot.egg-info/
+chromabot2.egg-info/
 notes/
 .idea
 .project

@@ -13,16 +13,24 @@ class Chromabot:
     def __init__(self, outside):
         self.outside = outside
         self.running = True
-        fmt = "%(asctime)s: %(levelname)s %(message)s"
-        logging.basicConfig(level=logging.DEBUG, format=fmt)
+        self.started = False
 
     def loop_forever(self):
+        logging.info("Bot started up")
         while self.running:
             self.loop_once()
 
     def loop_once(self):
         results = []
         outside = self.outside
+
+        if not self.started:
+            self.started = True
+            outside.startup()
+
+        logging.info("Checking for recruits")
+        outside.handle_recruits()
+
         messages = outside.get_messages()
         if messages is None:
             self.running = False
