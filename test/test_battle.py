@@ -245,14 +245,6 @@ class TestBattle(ChromaTest):
         self.assertTrue(infantry.battle)
         self.assertIn(infantry, self.battle.troops)
 
-    def test_error_reporting(self):
-        results = self.execute("attack #1 at Z9999 with infantry",
-                               assert_pass=False)
-        for result in results:
-            self.assertFalse(result.success)
-            self.assertEqual(result.text, "That row is not on the board!")
-            self.assertEqual(result.code, commands.CODE_NOK)
-
     def test_fight_ends(self):
         self.assertTrue(self.battle.relevant)
         # Also seems like a good place to test the winner

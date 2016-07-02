@@ -1,4 +1,4 @@
-
+from pyparsing import ParseException
 
 class Command:
 
@@ -37,7 +37,17 @@ class Result:
 
     @classmethod
     def from_exception(cls, e, message):
-        return cls(e.args[0], message, False, code=400, extra=e)
+        text = e.args[0]
+        if isinstance(e, ParseException):
+            text = (
+                "Parse error for command `{line}`, col {col}.  "
+                "Message: {msg}"
+            ).format(
+                line=e.line,
+                col=e.column,
+                msg=e.msg
+            )
+        return cls(text, message, False, code=400, extra=e)
 
     def __init__(self, text, message=None, success=True, code=200, extra=None):
         self.message = message

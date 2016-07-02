@@ -1,6 +1,7 @@
 import logging
 import time
 
+from pyparsing import ParseException
 
 from .commands import Result
 from .db import ChromaException
@@ -39,14 +40,18 @@ class Chromabot:
 
             for message in messages:
                 logging.info("Handling: %s" % message)
-                command = parse(message.raw_text)
+                command = None
+                try:
+                    command = parse(message.raw_text)
+                except ParseException as pe:
+                    result = Result.from_exception(pe, message)
                 if command:
                     try:
                         result = command.execute(message)
                     except ChromaException as e:
                         result = Result.from_exception(e, message)
-                    if result:
-                        results.append(result)
+                if result:
+                    results.append(result)
 
             results.extend(self.frame())
             outside.report_results(results)

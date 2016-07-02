@@ -135,8 +135,8 @@ class RedditOutsider(NullOutsider):
             elif assignment == "random":
                 team = random.randint(0, 1)
             else:
-                logging.warning("Don't understand how to assign via %s",
-                                assignment)
+                logging.critical("Don't understand how to assign via %s",
+                                 assignment)
                 team = 0
             newbie = User.create(
                 db=self.db,

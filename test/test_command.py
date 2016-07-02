@@ -151,4 +151,20 @@ class TestSkirmish(ChromaTest):
 
         self.assertNotEqual(inf1.id, inf2.id)
 
+    def test_error_reporting(self):
+        results = self.execute("attack #1 at Z9999 with infantry",
+                               assert_pass=False)
+        for result in results:
+            self.assertFalse(result.success)
+            self.assertEqual(result.text, "That row is not on the board!")
+            self.assertEqual(result.code, commands.CODE_NOK)
 
+    def test_error_reporting_parse(self):
+        cmd = "hurbledurblewerble 4"
+        results = self.execute(cmd, assert_pass=False)
+
+        for result in results:
+            self.assertFalse(result.success)
+            expected = "Parse error for command `%s`.*" % cmd
+            self.assertRegex(result.text, expected)
+            self.assertEqual(result.code, commands.CODE_NOK)

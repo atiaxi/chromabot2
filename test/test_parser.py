@@ -83,11 +83,16 @@ class TestSkirmish(unittest.TestCase):
         self.assertEqual(parsed.troop_type, "a rubber chicken")
 
     def test_column_only_one_char(self):
-        src = "attack at at AZ1 with infantry"
+        src = "attack at AZ1 with infantry"
         with self.assertRaises(ParseException):
             parse(src)
 
     def test_row_must_be_number(self):
-        src = "attack at at A,X with infantry"
+        src = "attack at A,X with infantry"
+        with self.assertRaises(ParseException):
+            parse(src)
+
+    def test_no_unicode_col(self):
+        src = "attack at ☃3 with infantry"
         with self.assertRaises(ParseException):
             parse(src)
