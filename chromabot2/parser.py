@@ -1,16 +1,17 @@
 from pyparsing import *
 
 from .battle import SkirmishCommand
-# from commands import (CodewordCommand,
-#                       DefectCommand,
-#                       ExtractCommand,
-#                       InvadeCommand,
-#                       MoveCommand,
-#                       PromoteCommand,
-#                       SkirmishCommand,
-#                       StatusCommand,
-#                       StopCommand,
-#                       TimeCommand)
+from .commands import (
+    # CodewordCommand,
+    # DefectCommand,
+    # ExtractCommand,
+    # InvadeCommand,
+    # MoveCommand,
+    # PromoteCommand,
+    StatusCommand,
+    # StopCommand,
+    # TimeCommand,
+)
 
 
 class Destination(object):
@@ -91,13 +92,16 @@ skirmishcmd.setParseAction(SkirmishCommand)
 # codewordcmd = Keyword("codeword") + (removecode | statuscode | assigncode)
 # codewordcmd.setParseAction(CodewordCommand)
 #
-# statuscmd = Keyword("status")
-# statuscmd.setParseAction(StatusCommand)
+statuscmd = Keyword("status")
+statuscmd.setParseAction(StatusCommand)
 #
 # root = (statuscmd | movecmd | invadecmd | skirmishcmd | defectcmd |
 #         promotecmd | timecmd | codewordcmd | extractcmd | stopcmd)
 
-root = skirmishcmd
+root = (
+    skirmishcmd |
+    statuscmd
+)
 
 
 def parse(s):

@@ -1,5 +1,6 @@
 import logging
 import random
+import re
 import socket
 
 import praw
@@ -8,7 +9,8 @@ from requests.exceptions import ConnectionError, HTTPError, Timeout
 
 from .commands import Result
 from .models import User
-from .outsiders import outsider, NullOutsider
+from .outsiders import Message, NullOutsider, outsider
+from .utils import col_to_letter
 
 
 def base36decode(number):
@@ -33,6 +35,35 @@ EXP_MAX = 54000
 retryable = retry(retry_on_exception=is_reddit_exception,
                   wait_exponential_multiplier=EXP_MULTIPLIER,
                   wait_exponential_max=EXP_MAX)
+
+
+FAIL_NOT_PLAYER = """
+Hello!  I'm a bot, in charge of running the 'Chroma' reddit game.
+Unfortunately, you don't seem to actually be playing the game I run!
+If you'd like to change that, comment in the latest recruitment thread
+in /r/%s"""
+
+
+def extract_command(text, use_full=False):
+    text = text.strip()
+    regex = re.compile(r"(?:\n|^)>(.*)")
+    result = regex.findall(text)
+    if use_full and not result:
+        return [text]
+    return result
+
+
+class RedditMessage(Message):
+    def __init__(self, raw_text, issuer, outside, actual=None):
+        super().__init__(raw_text, issuer, outside)
+        self.actual = actual
+
+    @retryable
+    def reply(self, text):
+        if self.actual:
+            self.actual.reply(text)
+        else:
+            logging.warning("Could not reply to message because no actual")
 
 
 @outsider("reddit")
@@ -116,3 +147,77 @@ class RedditOutsider(NullOutsider):
             logging.info("Recruited %s to team %s", newbie, team)
             reply = "You've been recruited!  Welcome to team %d." % team
             comment.reply(reply)
+
+    def status_for(self, user):
+        report = [
+            "Hello {name}!",
+            "You are a {rank} of the {team} army. "
+            "Your troops are as follows:"
+        ]
+        report.extend(self.troop_status(troop) for troop in user.troops)
+        result = "\n\n".join(report)
+        return result.format(
+            name=user.name,
+            rank=user.leader,
+            team=user.team,
+        )
+
+    def troop_status(self, troop):
+        result = [
+            "*",
+            troop.type.capitalize() + ":",
+        ]
+        if troop.is_deployable():
+            battle = "Ready for battle"
+        elif troop.is_alive():
+            battle = "In battle #{id} at {col},{row}"
+            data = dict(id=troop.battle.id,
+                        col=col_to_letter(troop.col),
+                        row=troop.row)
+            battle = battle.format(data)
+        else:
+            battle = troop.cause_of_death
+        result.append(battle)
+        return " ".join(result)
+
+    def find_player(self, comment):
+        if comment.author:  # Some messages (mod invites) don't have authors
+            with self.db.session() as session:
+                player = session.query(User).filter_by(
+                    name=comment.author.name.lower()).first()
+            if not player and getattr(comment, 'was_comment', None):
+                comment.reply(FAIL_NOT_PLAYER %
+                              self.config.headquarters)
+            return player
+        return None
+
+    @retryable
+    def get_messages(self):
+        # For now, just PMs
+        unread = self.reddit.get_unread(True, True)
+        result = []
+        for comment in unread:
+            logging.info("Received message %s" % comment.body)
+            # Only PMs, we deal with comment replies in process_post_for_battle
+            if not comment.was_comment:
+                # TODO: Check if we've seen this comment already
+                player = self.find_player(comment)
+                if player:
+                    cmds = extract_command(comment.body, use_full=True)
+                    logging.debug("CMDS is `%s` " % cmds)
+                    result.extend(
+                        RedditMessage(cmd, player, self, comment)
+                        for cmd in cmds
+                    )
+
+                comment.mark_as_read()
+        return result
+
+    @retryable
+    def report_results(self, results):
+        for result in results:
+            if result.is_internal():
+                # TODO: Battles ending or whatnot
+                continue
+            else:
+                result.message.reply(result.text)

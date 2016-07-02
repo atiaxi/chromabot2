@@ -40,7 +40,7 @@ class NullOutsider:
     def get_messages(self):
         return []
 
-    def get_recruits(self):
+    def handle_recruits(self):
         return []
 
     def infer_battle(self, message):
@@ -57,6 +57,9 @@ class NullOutsider:
 
     def startup(self):
         return []
+
+    def status_for(self, user):
+        return ""
 
     def visual_state(self, battle):
         return ''
@@ -132,6 +135,11 @@ class DebugOutsider(NullOutsider):
         if self.battle:
             print("The state of the board is:")
             print(self.visual_state(self.battle))
+
+    def status_for(self, user):
+        result = ["%r" % user, "Troops:"]
+        result.extend(("  %r" % troop) for troop in user.troops)
+        return "\n".join(result)
 
     def visual_state(self, battle):
         board = battle.realize_board()

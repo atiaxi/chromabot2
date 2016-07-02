@@ -20,7 +20,7 @@ from .commands import (
     Result,
 )
 from .db import Base, ChromaException
-from .utils import now
+from .utils import now, letter_to_col
 
 
 # EXCEPTIONS
@@ -49,7 +49,7 @@ class SkirmishCommand(Command):
     def __init__(self, tokens):
         super().__init__(tokens)
         self.raw_col = tokens['col']
-        self.col = string.ascii_lowercase.index(self.raw_col)
+        self.col = letter_to_col(self.raw_col)
         self.raw_row = tokens['row']
         self.row = max(0, int(self.raw_row) - 1)
         self.troop_type = tokens['troop_type']
