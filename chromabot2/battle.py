@@ -323,6 +323,7 @@ class Battle(Base):
                 loser = [None, other, troop][windex]
                 if winner:
                     winner.opposed = True
+                    winner.visible = True
                     self.kill_troop(loser, "has fallen in battle")
                     with self.load_and_adopt_scores() as scores:
                         amount = outside.config.battle.getint('kill_score')

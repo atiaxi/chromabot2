@@ -150,6 +150,8 @@ class TestBattle(ChromaTest):
         winner = board[3][6]
         self.assertEqual(winner, infantry)
 
+
+
         self.assertEqual(winner.hp, 1)
         self.assertTrue(winner.battle)
         self.assertIn(winner, self.battle.troops)
@@ -157,6 +159,28 @@ class TestBattle(ChromaTest):
         # PW should have 1 point for that
         scores = self.battle.load_scores()
         self.assertEqual(scores, [0, 1])
+
+    def test_troop_combat_win_made_visible(self):
+        self.config.battle['troop_delay'] = "0"
+        self.execute("attack #1 at E4 with ranged")
+        board = self.battle.realize_board()
+        ranged = board[3][5]  # Should have moved by 1
+        self.assertTrue(ranged)
+
+        self.execute("attack #1 at I4 with infantry", as_who=self.bob)
+        board = self.battle.realize_board()
+        infantry = board[3][7]
+        self.assertTrue(infantry)
+        prev_visible = infantry.visible
+        self.assertFalse(prev_visible)
+
+        # FIGHT!
+        self.bot_loop()
+
+        board = self.battle.realize_board()
+        winner = board[3][6]
+        self.assertEqual(winner, infantry)
+        self.assertTrue(infantry.visible)
 
     def test_troop_combat_lose(self):
         scores = self.battle.load_scores()
