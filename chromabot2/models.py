@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean
+from sqlalchemy import Boolean, Column, Integer, String, Text
 from sqlalchemy.orm import relationship
 
 from .battle import Troop
@@ -38,3 +38,19 @@ class User(Base):
     def __repr__(self):
         return "<User(name='%s', team='%d')>" % (
             self.name, self.team)
+
+
+# A generic key-value store for quick lookups.  Currently only used by the
+# reddit outsider
+class KeyValue(Base):
+    __tablename__ = "keyval"
+
+    # Strings as primary keys are apparently still not that great, so this one
+    # will have an int id too.
+    id = Column(Integer, primary_key=True)
+    namespace = Column(String)
+    key = Column(String)
+    value = Column(Text)
+
+    def __repr__(self):
+        return "<KeyValue(namespace=%s, key=%s)>" % (self.namespace, self.key)

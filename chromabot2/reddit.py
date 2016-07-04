@@ -10,8 +10,8 @@ import praw
 from retrying import retry
 from requests.exceptions import ConnectionError, HTTPError, Timeout
 
-from .commands import Result
-from .models import User
+from .battle import Battle
+from .models import KeyValue, User
 from .outsiders import Message, NullOutsider, outsider
 from .utils import col_to_letter
 
@@ -100,14 +100,27 @@ def reddit_data(battle):
 
 
 class RedditMessage(Message):
-    def __init__(self, raw_text, issuer, outside, actual=None):
+    def __init__(self, raw_text, issuer, outside, actual=None, battle=None):
         super().__init__(raw_text, issuer, outside)
         self.actual = actual
+        self.was_comment = getattr(actual, 'was_comment', None)
+        self.battle = battle
 
     @retryable
     def reply(self, text):
         if self.actual:
-            self.actual.reply(text)
+            if not self.was_comment:
+                self.actual.reply(text)
+            else:
+                header = ("(In response to [this comment](%s))" %
+                          self.actual.permalink)
+                full_reply = "%s\n\n%s" % (header, text)
+                logging.info("PMing: %s" % full_reply)
+                reddit = self.outside.reddit
+                reddit.send_message(
+                    self.issuer.name,
+                    "Chroma game reply",
+                    full_reply)
         else:
             logging.warning("Could not reply to message because no actual")
 
@@ -137,7 +150,6 @@ class RedditOutsider(NullOutsider):
 
     @retryable
     def handle_recruits(self):
-        conf = self.config
         hq = self.reddit.get_subreddit(self.config.reddit['headquarters'])
         submissions = hq.get_new()
         for submission in submissions:
@@ -227,6 +239,50 @@ class RedditOutsider(NullOutsider):
         result.append(battle)
         return " ".join(result)
 
+    def convert_comments(self, comments, *, battle=None, use_full=False):
+        result = []
+        if battle:
+            reddata = reddit_data(battle)
+            if 'seen_comments' not in reddata:
+                with battle.load_and_adopt_outside_data() as data:
+                    data['reddit']['seen_comments'] = []
+
+        for comment in comments:
+            with self.db.session() as s:
+                if battle:
+                    seen = comment.name in reddit_data(battle)['seen_comments']
+                else:
+                    seen = s.query(KeyValue).filter_by(
+                        namespace='reddit', key=comment.name).count()
+            if seen:
+                continue
+
+            if not comment.author:  # Deleted comments don't have an author
+                continue
+            username = self.config.reddit['username'].lower()
+            if comment.author.name.lower() == username:
+                continue
+            logging.info("Received message %s" % comment.body)
+            player = self.find_player(comment)
+            if player:
+                cmds = extract_command(comment.body, use_full=use_full)
+                result.extend(
+                    RedditMessage(cmd, player, self, comment, battle)
+                    for cmd in cmds
+                )
+            else:
+                name = comment.author.name.lower()
+                logging.info("(The player %s is not registered)" % name)
+            comment.mark_as_read()
+            if battle:
+                with battle.load_and_adopt_outside_data() as data:
+                    data['reddit']['seen_comments'].append(comment.name)
+            else:
+                with self.db.session() as s:
+                    s.add(KeyValue(namespace='reddit', key=comment.name,
+                                   value='{}'))
+        return result
+
     @retryable
     def find_player(self, comment):
         if comment.author:  # Some messages (mod invites) don't have authors
@@ -241,31 +297,32 @@ class RedditOutsider(NullOutsider):
 
     @retryable
     def get_messages(self):
-        # For now, just PMs
         unread = self.reddit.get_unread(True, True)
         result = []
-        for comment in unread:
-            logging.info("Received message %s" % comment.body)
-            # Only PMs, we deal with comment replies in process_post_for_battle
-            if not comment.was_comment:
-                # TODO: Check if we've seen this comment already
-                player = self.find_player(comment)
-                if player:
-                    cmds = extract_command(comment.body, use_full=True)
-                    logging.debug("CMDS is `%s` " % cmds)
-                    result.extend(
-                        RedditMessage(cmd, player, self, comment)
-                        for cmd in cmds
-                    )
+        # Handle just the PMs first:
+        filtered = (comment for comment in unread
+                    if not comment.was_comment)
+        result.extend(self.convert_comments(filtered, use_full=True))
 
-                comment.mark_as_read()
+        # And now the battle comments
+        with self.db.session() as s:
+            battles = s.query(Battle).filter_by(relevant=True)
+
+        for battle in battles:
+            post = self.get_post_for_battle(battle)
+            replaced = post.replace_more_comments(limit=None, threshold=0)
+            if replaced:
+                logging.warning("Comments that went un-replaced: %s" % replaced)
+            flat_comments = praw.helpers.flatten_tree(
+                post.comments)
+
+            result.extend(self.convert_comments(flat_comments,
+                                                battle=battle,
+                                                use_full=False))
         return result
 
     @retryable
     def populate_battle_data(self, battle, data):
-        from .utils import now
-        when = timestr(battle.begins)
-
         text = INVASION.format(time=timestr(battle.begins))
         post = self.reddit.submit(self.config.reddit['disputed_zone'],
                                   title='The Eternal Battle Continues',
@@ -289,10 +346,7 @@ class RedditOutsider(NullOutsider):
         end = timestr(battle.display_ends)
         text = BATTLE.format(id=battle.id, team0=team0, team1=team1,
                              board=board, end=end)
-
-        post = self.reddit.get_submission(
-            submission_id=reddit_data(battle)['id36'],
-        )
+        post = self.get_post_for_battle(battle)
         post.edit(text)
 
     @retryable
@@ -302,16 +356,19 @@ class RedditOutsider(NullOutsider):
         winner = "Team %s" % battle.victor
         text = END_OF_BATTLE.format(id=battle.id, team0=team0, team1=team1,
                                     board=board, winner=winner)
+        post = self.get_post_for_battle(battle)
+        post.edit(text)
+
+    @retryable
+    def get_post_for_battle(self, battle):
         post = self.reddit.get_submission(
             submission_id=reddit_data(battle)['id36'],
         )
-        post.edit(text)
-
+        return post
 
     def visual_state(self, battle):
         board = battle.realize_board()
         num_cols = len(board[0])
-        num_rows = len(board)
         col_labels = " " + string.ascii_uppercase[:num_cols]
         header = "|%s|" % "|".join(col_labels)
         sep = "|%s" % ("-|" * len(col_labels))
