@@ -65,10 +65,15 @@ class Chromabot:
     def frame(self):
         results = []
 
-        logging.info("Updating battles")
         with self.outside.db.session() as s:
-            battles = s.query(Battle).filter_by(relevant=True)
+            battles = s.query(Battle).filter_by(relevant=True).all()
 
+        logging.info("Checking to see if eternal battle needs to start")
+        if not battles:
+            eternal = Battle.create(self.outside)
+            logging.info("Eternal battle created, id %s !", eternal.id)
+
+        logging.info("Updating battles")
         for battle in battles:
             logging.info("Updating battle %d", battle.id)
             results.extend(result for result in battle.update(self.outside))

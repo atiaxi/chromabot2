@@ -48,8 +48,12 @@ class NullOutsider:
         # But you can't get context except via an Outsider
         return None
 
-    def populate_battle_data(self, battle):
-        # Populates the 'outside_data' field of the Battle object
+    def populate_battle_data(self, battle, data):
+        # Update the `data` dict passed in and it'll be adopted by the battle
+        # in the `outside_data` field.  Convention is that `data` is a dict
+        # of dicts.  The outer keys are the name of the outsider this data
+        # is relevant for (to allow multiple outsiders to coexist), and the
+        # inner keys are entiely arbitrary.
         pass
 
     def report_results(self, results):

@@ -62,10 +62,10 @@ class TestOutsider(NullOutsider):
         if self.battle:
             return self.battle
 
-    def populate_battle_data(self, battle):
+    def populate_battle_data(self, data):
         # Not setting self.battle here because some tests depend on not being
         # able to infer it.
-        battle.outside_data = "hello"
+        data['test'] = {'werg': 'hello'}
 
 
 class ChromaTest(unittest.TestCase):

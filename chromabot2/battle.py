@@ -247,13 +247,19 @@ class Battle(Base):
         }
         scores = [0, 0]
 
+        outside_data = {}
+
         with outside.db.session() as s:
             result = cls(begins=begins, ends=ends, display_ends=display_ends,
+                         outside_data=json.dumps(outside_data),
                          state=json.dumps(state), victor=-1,
                          scores=json.dumps(scores), active=False,
                          relevant=True)
             s.add(result)
-        outside.populate_battle_data(result)
+
+        with outside.db.session():
+            with result.load_and_adopt_outside_data() as data:
+                    outside.populate_battle_data(result, data)
         return result
 
     def place_troop(self, troop, *, col, row, outside, moving=False):
@@ -411,6 +417,18 @@ class Battle(Base):
                 self.adopt_scores(scores)
         else:
             self.adopt_scores(scores)
+
+    def load_outside_data(self):
+        return json.loads(self.outside_data)
+
+    def adopt_outside_data(self, data):
+        self.outside_data = json.dumps(data)
+
+    @contextmanager
+    def load_and_adopt_outside_data(self):
+        data = self.load_outside_data()
+        yield data
+        self.adopt_outside_data(data)
 
     def realize_board(self):
         state = json.loads(self.state)

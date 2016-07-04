@@ -2,6 +2,8 @@ import logging
 import random
 import re
 import socket
+import time
+from urllib.parse import quote_plus
 
 import praw
 from retrying import retry
@@ -29,6 +31,21 @@ def is_reddit_exception(ex):
         socket.error,
     ))
 
+FAIL_NOT_PLAYER = """
+Hello!  I'm a bot, in charge of running the 'Chroma' reddit game.
+Unfortunately, you don't seem to actually be playing the game I run!
+If you'd like to change that, comment in the latest recruitment thread
+in /r/%s"""
+
+INVASION = """
+Reports of troops bound to this location have been flooding in.  As the
+air-raid sirens blare and the civilians make their ways to bomb shelters,
+you know you have only a limited amount of time to prepare.
+
+Your best intelligence indicates that the invasion will begin at
+{time}.
+"""
+
 EXP_MULTIPLIER = 1000
 EXP_MAX = 54000
 
@@ -37,11 +54,15 @@ retryable = retry(retry_on_exception=is_reddit_exception,
                   wait_exponential_max=EXP_MAX)
 
 
-FAIL_NOT_PLAYER = """
-Hello!  I'm a bot, in charge of running the 'Chroma' reddit game.
-Unfortunately, you don't seem to actually be playing the game I run!
-If you'd like to change that, comment in the latest recruitment thread
-in /r/%s"""
+def timestr(secs=None):
+    if secs is None:
+        secs = time.mktime(time.localtime())
+
+    timeresult = time.gmtime(secs)
+    timestresult = time.strftime("%Y-%m-%d %I:%M:%S %p GMT", timeresult)
+    url = ("http://www.wolframalpha.com/input/?i=%s+in+local+time" %
+           quote_plus(timestresult))
+    return "[%s](%s)" % (timestresult, url)
 
 
 def extract_command(text, use_full=False):
@@ -212,6 +233,19 @@ class RedditOutsider(NullOutsider):
 
                 comment.mark_as_read()
         return result
+
+    @retryable
+    def populate_battle_data(self, battle, data):
+        from .utils import now
+        when = timestr(battle.begins)
+
+        text = INVASION.format(time=timestr(battle.begins))
+        post = self.reddit.submit(self.config.reddit['disputed_zone'],
+                                  title='The Eternal Battle Continues',
+                                  text=text)
+        data['reddit'] = {
+            'fullname': post.name,
+        }
 
     @retryable
     def report_results(self, results):
