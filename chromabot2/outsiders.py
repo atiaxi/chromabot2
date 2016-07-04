@@ -56,6 +56,9 @@ class NullOutsider:
         # inner keys are entiely arbitrary.
         pass
 
+    def report_battle_end(self, battle):
+        pass
+
     def report_results(self, results):
         pass
 
@@ -64,6 +67,9 @@ class NullOutsider:
 
     def status_for(self, user):
         return ""
+
+    def update_battle(self, battle):
+        pass
 
     def visual_state(self, battle):
         return ''

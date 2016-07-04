@@ -2,6 +2,7 @@ import logging
 import random
 import re
 import socket
+import string
 import time
 from urllib.parse import quote_plus
 
@@ -39,11 +40,31 @@ in /r/%s"""
 
 INVASION = """
 Reports of troops bound to this location have been flooding in.  As the
-air-raid sirens blare and the civilians make their ways to bomb shelters,
+air-raid sirens blare and the civilians make their ways to the bomb shelters,
 you know you have only a limited amount of time to prepare.
 
 Your best intelligence indicates that the invasion will begin at
 {time}.
+"""
+
+BATTLE = """
+# Battle {id}
+
+### Score: {team0} vs {team1}
+
+{board}
+
+This battle will end sometime near {end}.  To fight, comment here with your
+commands, prefixed with `>`.
+"""
+
+END_OF_BATTLE = """
+# Battle {id}: COMPLETE
+
+### Score: {team0} vs {team1}
+## The victor: {winner}
+
+{board}
 """
 
 EXP_MULTIPLIER = 1000
@@ -72,6 +93,10 @@ def extract_command(text, use_full=False):
     if use_full and not result:
         return [text]
     return result
+
+
+def reddit_data(battle):
+    return battle.load_outside_data()['reddit']
 
 
 class RedditMessage(Message):
@@ -192,15 +217,17 @@ class RedditOutsider(NullOutsider):
             battle = "Ready for battle"
         elif troop.is_alive():
             battle = "In battle #{id} at {col},{row}"
+            display_row = troop.row + 1
             data = dict(id=troop.battle.id,
                         col=col_to_letter(troop.col),
-                        row=troop.row)
-            battle = battle.format(data)
+                        row=display_row)
+            battle = battle.format(**data)
         else:
             battle = troop.cause_of_death
         result.append(battle)
         return " ".join(result)
 
+    @retryable
     def find_player(self, comment):
         if comment.author:  # Some messages (mod invites) don't have authors
             with self.db.session() as session:
@@ -243,15 +270,54 @@ class RedditOutsider(NullOutsider):
         post = self.reddit.submit(self.config.reddit['disputed_zone'],
                                   title='The Eternal Battle Continues',
                                   text=text)
+        _, _, id36 = post.name.partition('_')
         data['reddit'] = {
             'fullname': post.name,
+            'id36': id36,
         }
 
     @retryable
     def report_results(self, results):
         for result in results:
-            if result.is_internal():
-                # TODO: Battles ending or whatnot
-                continue
-            else:
+            if not result.is_internal():
                 result.message.reply(result.text)
+
+    @retryable
+    def update_battle(self, battle):
+        board = self.visual_state(battle)
+        team0, team1, *_ = battle.load_scores()
+        end = timestr(battle.display_ends)
+        text = BATTLE.format(id=battle.id, team0=team0, team1=team1,
+                             board=board, end=end)
+
+        post = self.reddit.get_submission(
+            submission_id=reddit_data(battle)['id36'],
+        )
+        post.edit(text)
+
+    @retryable
+    def report_battle_end(self, battle):
+        board = self.visual_state(battle)
+        team0, team1, *_ = battle.load_scores()
+        winner = "Team %s" % battle.victor
+        text = END_OF_BATTLE.format(id=battle.id, team0=team0, team1=team1,
+                                    board=board, winner=winner)
+        post = self.reddit.get_submission(
+            submission_id=reddit_data(battle)['id36'],
+        )
+        post.edit(text)
+
+
+    def visual_state(self, battle):
+        board = battle.realize_board()
+        num_cols = len(board[0])
+        num_rows = len(board)
+        col_labels = " " + string.ascii_uppercase[:num_cols]
+        header = "|%s|" % "|".join(col_labels)
+        sep = "|%s" % ("-|" * len(col_labels))
+        lines = [header, sep]
+        for row_number, row in enumerate(board):
+            cols = ["%d" % (row_number + 1)]
+            cols.extend(self.icon_for_troop(troop) for troop in row)
+            lines.append("|%s|" % "|".join(cols))
+        return "\n".join(lines)

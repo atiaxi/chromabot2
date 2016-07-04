@@ -1,17 +1,9 @@
 
 * Create a 'seen comments' DB for reddit outsider
 
-* Get eternal battle to work
-
 * Read and respond to battle thread
 
-* Post and associate battle thread
-
-* update battle thread on battle start
-
-* update battle thread on battle end
-
-* update battle thread per frame
+* Visiblize troops that get into a fight
 
 Other stuff that would be nice but isn't critical:
 

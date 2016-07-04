@@ -493,4 +493,7 @@ class Battle(Base):
                              extra=self)
                 self.end()
                 results.append(msg)
+                outside.report_battle_end(self)
+            else:
+                outside.update_battle(self)
         return results

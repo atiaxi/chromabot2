@@ -66,6 +66,11 @@ def timestr(secs=None):
                           time.gmtime(secs))
 
 
+def commit():
+    with db.session():
+        pass
+
+
 def main():
     global db
 
