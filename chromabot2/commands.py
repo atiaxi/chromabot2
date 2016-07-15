@@ -37,7 +37,7 @@ class Result:
 
     @classmethod
     def from_exception(cls, e, message):
-        text = e.args[0]
+        text = e.args
         if isinstance(e, ParseException):
             text = (
                 "Parse error for command `{line}`, col {col}.  "

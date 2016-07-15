@@ -56,10 +56,10 @@ class Chromabot:
             results.extend(self.frame())
             outside.report_results(results)
         delay = outside.config.bot.getint('sleep', fallback=0)
+        logging.debug("Results: %s", results)
         if delay:
             logging.info("Sleeping for %d seconds" % delay)
             time.sleep(delay)
-        logging.debug("Results: %s", results)
         return results
 
     def frame(self):

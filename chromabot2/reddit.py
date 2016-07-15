@@ -136,17 +136,24 @@ class RedditOutsider(NullOutsider):
         ua = config.reddit['useragent']
         site = config.reddit.get('site', 'reddit')
         logging.debug("Using ua '%s' and site '%s'", ua, site)
-        self.reddit = praw.Reddit(user_agent=ua, site_name=site)
+        cid = config.reddit['client_id']
+        csec = config.reddit['client_secret']
+        self.reddit = praw.Reddit(user_agent=ua, site_name=site,
+                                  client_id=cid, client_secret=csec)
 
     @retryable
     def startup(self):
-        conf = self.config
-        username = conf.reddit['username']
-        passwd = conf.reddit['password']
-        logging.info("Logging in as %s", username)
-        logging.debug("Using password: %s", passwd)
-        self.reddit.login(username, passwd)
-        logging.info("Logged in")
+        config = self.config.reddit
+        logging.info("Attempting to log in via oauth")
+        self.reddit.set_oauth_app_info(
+            client_id=config['client_id'],
+            client_secret=config['client_secret'],
+            redirect_uri=config['redirect_uri'],
+        )
+
+        self.reddit.refresh_access_information(config['refresh_token'])
+        authenticated_user = self.reddit.get_me()
+        logging.info("Logged in as %s", authenticated_user.name)
 
     @retryable
     def handle_recruits(self):
@@ -167,6 +174,7 @@ class RedditOutsider(NullOutsider):
     @retryable
     def recruit_from_comment(self, comment):
         if not comment.author:  # Deleted comments don't have an author
+            logging.debug("- Ignoring deleted comment")
             return
         name = comment.author.name.lower()
         if name == self.config.reddit['username'].lower():
@@ -205,6 +213,8 @@ class RedditOutsider(NullOutsider):
             logging.info("Recruited %s to team %s", newbie, team)
             reply = "You've been recruited!  Welcome to team %d." % team
             comment.reply(reply)
+        else:
+            logging.debug("Ignoring prerexisting player %s", found)
 
     def status_for(self, user):
         report = [

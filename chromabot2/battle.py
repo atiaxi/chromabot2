@@ -180,7 +180,10 @@ class Troop(Base):
 
     def icon_for_troop(self, config):
         key = "icons_%d" % self.team
-        icon = config[key][self.type]
+        if self.visible:
+            icon = config[key][self.type]
+        else:
+            icon = config[key]['unknown']
         # Directionality for team
         if self.team == 0:
             return "%s>" % icon

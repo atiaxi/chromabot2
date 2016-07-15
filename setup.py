@@ -16,7 +16,7 @@ setup(
     url="http://reddit.com/r/chromabot",
     packages=['chromabot2'],
     install_requires=[
-        "praw >= 3.5.0",
+        "praw == 3.5.0",
         "pyparsing >=2.1.1",
         "retrying >= 1.3.3",
         "sqlalchemy >= 1.0.12",
