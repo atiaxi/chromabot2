@@ -37,7 +37,7 @@ class Result:
 
     @classmethod
     def from_exception(cls, e, message):
-        text = e.args
+        text = str(e.args)
         if isinstance(e, ParseException):
             text = (
                 "Parse error for command `{line}`, col {col}.  "
@@ -64,6 +64,16 @@ class Result:
 
 
 # Actual commands follow:
+
+class DefectCommand(Command):
+
+    def execute(self, message):
+        team = [0, 1][message.issuer.team - 1]
+        message.issuer.defect(team)
+        txt = "Done, you are now on team %s" % team
+        return Result(txt, message)
+
+
 class StatusCommand(Command):
 
     def execute(self, message):

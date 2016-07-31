@@ -35,6 +35,10 @@ class User(Base):
 
         return result
 
+    def defect(self, team):
+        with self.session():
+            self.team = team
+
     def __repr__(self):
         return "<User(name='%s', team='%d')>" % (
             self.name, self.team)

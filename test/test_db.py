@@ -104,6 +104,36 @@ class TestTroop(ChromaTest):
         # By default, this troop shouldn't have a battle assigned to it
         self.assertFalse(troop.battle)
 
+    def test_circ(self):
+        # This is going to get exponential real quick but OH WELL
+        cavalry = Troop.cavalry(self.alice)
+        infantry = Troop.infantry(self.alice)
+        ranged = Troop.ranged(self.alice)
+
+        with self.subTest("Cavalry"):
+            with self.subTest("CI"):
+                self.assertEqual(cavalry.fights(infantry), 1)
+            with self.subTest("RC"):
+                self.assertEqual(cavalry.fights(ranged), -1)
+            with self.subTest("CC"):
+                self.assertEqual(cavalry.fights(cavalry), 0)
+
+        with self.subTest("Infantry"):
+            with self.subTest("IR"):
+                self.assertEqual(infantry.fights(ranged), 1)
+            with self.subTest("CI"):
+                self.assertEqual(infantry.fights(cavalry), -1)
+            with self.subTest("II"):
+                self.assertEqual(infantry.fights(infantry), 0)
+
+        with self.subTest("Ranged"):
+            with self.subTest("RC"):
+                self.assertEqual(ranged.fights(cavalry), 1)
+            with self.subTest("IR"):
+                self.assertEqual(ranged.fights(infantry), -1)
+            with self.subTest("RR"):
+                self.assertEqual(ranged.fights(ranged), 0)
+
 
 class TestBattle(ChromaTest):
 

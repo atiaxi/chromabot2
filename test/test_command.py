@@ -156,7 +156,7 @@ class TestSkirmish(ChromaTest):
                                assert_pass=False)
         for result in results:
             self.assertFalse(result.success)
-            self.assertEqual(result.text, "That row is not on the board!")
+            self.assertIn("That row is not on the board!", result.text)
             self.assertEqual(result.code, commands.CODE_NOK)
 
     def test_error_reporting_parse(self):
@@ -168,3 +168,12 @@ class TestSkirmish(ChromaTest):
             expected = "Parse error for command `%s`.*" % cmd
             self.assertRegex(result.text, expected)
             self.assertEqual(result.code, commands.CODE_NOK)
+
+
+class TestDefect(ChromaTest):
+
+    def test_defect_cmd(self):
+        old_team = self.alice.team
+        self.execute("defect")
+        new_team = self.alice.team
+        self.assertNotEqual(old_team, new_team)

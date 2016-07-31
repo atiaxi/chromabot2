@@ -3,7 +3,7 @@ from pyparsing import *
 from .battle import SkirmishCommand
 from .commands import (
     # CodewordCommand,
-    # DefectCommand,
+    DefectCommand,
     # ExtractCommand,
     # InvadeCommand,
     # MoveCommand,
@@ -71,10 +71,8 @@ skirmishcmd.setParseAction(SkirmishCommand)
 # stopcmd = Keyword("stop")
 # stopcmd.setParseAction(StopCommand)
 #
-# defect = Keyword("defect")
-# team = Keyword("orangered") | Keyword("periwinkle")
-# defectcmd = (defect + Optional(Keyword("to") + team("team")))
-# defectcmd.setParseAction(DefectCommand)
+defect = Keyword("defect")
+defect.setParseAction(DefectCommand)
 #
 # promote = (Keyword("promote") | Keyword("demote"))
 # promotecmd = promote("direction") + Word(alphanums + "_-")("who")
@@ -99,6 +97,7 @@ statuscmd.setParseAction(StatusCommand)
 #         promotecmd | timecmd | codewordcmd | extractcmd | stopcmd)
 
 root = (
+    defect |
     skirmishcmd |
     statuscmd
 )

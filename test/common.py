@@ -117,7 +117,7 @@ class ChromaTest(unittest.TestCase):
                                                        result.text)
             self.assertFalse(result.success, msg)
             if err_text:
-                self.assertEqual(result.text, err_text)
+                self.assertIn(err_text, result.text)
             self.assertEqual(result.code, commands.CODE_NOK)
 
     def bot_loop(self):
