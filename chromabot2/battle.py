@@ -168,7 +168,7 @@ class Troop(Base):
         ordering = ["ranged", "infantry", "cavalry"]
         our_index = ordering.index(self.type)
         win_against = ordering[our_index - 1]
-        if self.type == win_against:
+        if other.type == win_against:
             return 1
         return -1
 
