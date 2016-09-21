@@ -109,7 +109,8 @@ class RedditMessage(Message):
     @retryable
     def reply(self, text):
         if self.actual:
-            if not self.was_comment:
+            pm_only = self.outside.config.reddit.getboolean("pm_only")
+            if not (self.was_comment or pm_only):
                 self.actual.reply(text)
             else:
                 header = ("(In response to [this comment](%s))" %
