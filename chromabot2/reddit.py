@@ -215,7 +215,7 @@ class RedditOutsider(NullOutsider):
             reply = "You've been recruited!  Welcome to team %d." % team
             comment.reply(reply)
         else:
-            logging.debug("Ignoring prerexisting player %s", found)
+            logging.debug("Ignoring preexisting player %s", found)
 
     def status_for(self, user):
         report = [

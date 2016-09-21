@@ -30,6 +30,9 @@ class MockConf(object):
         self.battle['goal_score'] = "2"
         self.battle['kill_score'] = "1"
 
+    def refresh(self):
+        pass
+
     def __getitem__(self, key):
         return self.data[key]
 
