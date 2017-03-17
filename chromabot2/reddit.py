@@ -113,8 +113,10 @@ class RedditMessage(Message):
             if not (self.was_comment or pm_only):
                 self.actual.reply(text)
             else:
-                header = ("(In response to [this comment](%s))" %
-                          self.actual.permalink)
+                header = ""
+                if self.was_comment:
+                    header = ("(In response to [this comment](%s))" %
+                              self.actual.permalink)
                 full_reply = "%s\n\n%s" % (header, text)
                 logging.info("PMing: %s" % full_reply)
                 reddit = self.outside.reddit
