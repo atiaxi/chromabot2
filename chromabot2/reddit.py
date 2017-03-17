@@ -109,7 +109,8 @@ class RedditMessage(Message):
     @retryable
     def reply(self, text):
         if self.actual:
-            if not self.was_comment:
+            pm_only = self.outside.config.reddit.getboolean("pm_only")
+            if not (self.was_comment or pm_only):
                 self.actual.reply(text)
             else:
                 header = ("(In response to [this comment](%s))" %
@@ -214,7 +215,7 @@ class RedditOutsider(NullOutsider):
             reply = "You've been recruited!  Welcome to team %d." % team
             comment.reply(reply)
         else:
-            logging.debug("Ignoring prerexisting player %s", found)
+            logging.debug("Ignoring preexisting player %s", found)
 
     def status_for(self, user):
         report = [

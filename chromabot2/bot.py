@@ -25,6 +25,8 @@ class Chromabot:
         results = []
         outside = self.outside
 
+        outside.config.refresh()
+
         if not self.started:
             self.started = True
             outside.startup()
